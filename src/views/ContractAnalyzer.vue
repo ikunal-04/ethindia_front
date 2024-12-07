@@ -826,43 +826,116 @@ async function handleImportContract() {
 }
 
 function processEVMContract(contractData) {
-  // For BNBScan API response
+  // Extract the source code field
   const sourceCode = contractData.SourceCode || contractData.source_code;
-  
+
   if (!sourceCode) {
     throw new Error('Contract source code not available. The contract may not be verified.');
   }
-  
+
   let fullCode = sourceCode;
-  
+
+  try {
+    // Check if the source code is a JSON string
+    if (sourceCode.trim().startsWith('{{')) {
+      // Normalize braces and parse the JSON structure
+      const parsedSource = JSON.parse(sourceCode.replace(/{{/g, '{').replace(/}}/g, '}'));
+
+      // Iterate through the sources to find the first Solidity file content
+      const sources = parsedSource?.sources;
+      if (!sources || typeof sources !== 'object') {
+        throw new Error('Invalid source structure in the provided source code.');
+      }
+
+      const fileNames = Object.keys(sources);
+      if (fileNames.length === 0) {
+        throw new Error('No source files found in the provided source code.');
+      }
+
+      // Extract the first file's content
+      const firstFileName = fileNames[0];
+      const content = sources[firstFileName]?.content;
+
+      if (!content) {
+        throw new Error(`Solidity code content not found in the file: ${firstFileName}`);
+      }
+
+      fullCode = content;
+    }
+  } catch (error) {
+    throw new Error(`Failed to parse contract source code: ${error.message}`);
+  }
+
   // Add compiler version if available
   if (contractData.CompilerVersion || contractData.compiler_version) {
     fullCode = `// Compiler: ${contractData.CompilerVersion || contractData.compiler_version}\n${fullCode}`;
   }
-  
+
+  // Assign processed code to the reactive state
   contractCode.value = fullCode;
   analysisResult.value = null;
   analysisError.value = '';
+
+  // Return the processed code for further use
+  return fullCode;
 }
 
+
 function processPolkadotContract(contractData) {
-  const sourceCode = contractData.SourceCode || contractData.source;
-  
+  const sourceCode = contractData.SourceCode || contractData.source_code;
+
   if (!sourceCode) {
-    throw new Error('Contract source code not available for Polkadot contract.');
+    throw new Error('Contract source code not available. The contract may not be verified.');
   }
-  
+
   let fullCode = sourceCode;
-  
-  // Add metadata if available
-  if (contractData.ABI) {
-    fullCode = `// Contract ABI\n${contractData.ABI}\n\n${fullCode}`;
+
+  try {
+    // Check if the source code is a JSON string
+    if (sourceCode.trim().startsWith('{{')) {
+      // Normalize braces and parse the JSON structure
+      const parsedSource = JSON.parse(sourceCode.replace(/{{/g, '{').replace(/}}/g, '}'));
+
+      // Iterate through the sources to find the first Solidity file content
+      const sources = parsedSource?.sources;
+      if (!sources || typeof sources !== 'object') {
+        throw new Error('Invalid source structure in the provided source code.');
+      }
+
+      const fileNames = Object.keys(sources);
+      if (fileNames.length === 0) {
+        throw new Error('No source files found in the provided source code.');
+      }
+
+      // Extract the first file's content
+      const firstFileName = fileNames[0];
+      const content = sources[firstFileName]?.content;
+
+      if (!content) {
+        throw new Error(`Solidity code content not found in the file: ${firstFileName}`);
+      }
+
+      fullCode = content;
+    }
+  } catch (error) {
+    throw new Error(`Failed to parse contract source code: ${error.message}`);
   }
-  
+
+  // Add compiler version if available
+  if (contractData.CompilerVersion || contractData.compiler_version) {
+    fullCode = `// Compiler: ${contractData.CompilerVersion || contractData.compiler_version}\n${fullCode}`;
+  }
+
+  // Assign processed code to the reactive state
   contractCode.value = fullCode;
   analysisResult.value = null;
   analysisError.value = '';
+
+  // Return the processed code for further use
+  return fullCode;
 }
+
+
 
 async function handleAnalyzeContract() {
   if (!contractCode.value.trim()) {
