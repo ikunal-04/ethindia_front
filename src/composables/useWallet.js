@@ -1,4 +1,3 @@
-// useWallet.js
 import { ref, onMounted, onUnmounted } from 'vue';
 import { ethers } from 'ethers';
 
@@ -26,6 +25,18 @@ const BSC_TESTNET_CONFIG = {
   blockExplorerUrls: ['https://testnet.bscscan.com'],
 };
 
+const MOONBASE_CONFIG = {
+  chainId: '0x507', // 1287 in decimal
+  chainName: 'Moonbase Alpha Testnet',
+  nativeCurrency: {
+    name: 'DEV',
+    symbol: 'DEV',
+    decimals: 18,
+  },
+  rpcUrls: ['https://rpc.api.moonbase.moonbeam.network'], // Moonbase RPC URL
+  blockExplorerUrls: ['https://moonbase.moonscan.io'],
+};
+
 export function useWallet() {
   const address = ref('');
   const balance = ref('0');
@@ -33,7 +44,7 @@ export function useWallet() {
   const isCorrectChain = ref(false);
   const error = ref('');
   const isLoading = ref(false);
-  const currentNetwork = ref('base'); // Add network tracking
+  const currentNetwork = ref('base'); 
 
   // Enum-like object for networks
   const NETWORKS = {
@@ -44,6 +55,10 @@ export function useWallet() {
     BSC_TESTNET: {
       config: BSC_TESTNET_CONFIG,
       name: 'bsc'
+    }, 
+    MOONBASE: {
+      config: MOONBASE_CONFIG,
+      name: 'moonbase'
     }
   };
 
@@ -121,6 +136,11 @@ export function useWallet() {
               isCorrectNetwork = await checkChainId(NETWORKS.BSC_TESTNET);
             }
 
+            // If not BSC Testnet, try Moonbase
+            if (!isCorrectNetwork) {
+              isCorrectNetwork = await checkChainId(NETWORKS.MOONBASE);
+            }
+
             if (isCorrectNetwork) {
               address.value = accounts[0].address;
               await updateBalance(accounts[0].address);
@@ -151,7 +171,7 @@ export function useWallet() {
   }
 
   async function handleChainChanged(chainId) {
-    // Check if the chainId matches either Base Sepolia or BSC Testnet
+    // Check if the chainId matches Base Sepolia, BSC Testnet, or Moonbase
     let isCorrectNetwork = false;
     
     if (chainId === NETWORKS.BASE_SEPOLIA.config.chainId) {
@@ -160,12 +180,15 @@ export function useWallet() {
     } else if (chainId === NETWORKS.BSC_TESTNET.config.chainId) {
       isCorrectNetwork = true;
       currentNetwork.value = NETWORKS.BSC_TESTNET.name;
+    } else if (chainId === NETWORKS.MOONBASE.config.chainId) {
+      isCorrectNetwork = true;
+      currentNetwork.value = NETWORKS.MOONBASE.name;
     }
 
     isCorrectChain.value = isCorrectNetwork;
     
     if (!isCorrectNetwork && isConnected.value) {
-      error.value = 'Please switch to Base Sepolia or BSC Testnet';
+      error.value = 'Please switch to Base Sepolia, BSC Testnet, or Moonbase Testnet';
     } else {
       error.value = '';
     }
@@ -189,10 +212,11 @@ export function useWallet() {
         method: 'eth_requestAccounts',
       });
 
-      // Choose network configuration
-      const network = preferredNetwork === 'bsc' 
-        ? NETWORKS.BSC_TESTNET 
-        : NETWORKS.BASE_SEPOLIA;
+      // Choose network configuration based on preferred network
+      const network = 
+        preferredNetwork === 'bsc' ? NETWORKS.BSC_TESTNET :
+        preferredNetwork === 'moonbase' ? NETWORKS.MOONBASE :
+        NETWORKS.BASE_SEPOLIA;
 
       // Ensure we're on the correct network
       let isCorrectNetwork = await checkChainId(network);
@@ -263,6 +287,7 @@ export function useWallet() {
     isCorrectChain,
     error,
     isLoading,
-    currentNetwork, // Expose the current network
+    currentNetwork,
+    NETWORKS, // Expose networks for easier reference
   };
 }

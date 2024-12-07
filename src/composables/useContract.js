@@ -1335,9 +1335,9 @@ export function useContract() {
       throw new Error('Wallet not connected')
     }
 
-    const supportedChains = [84532, 97]
+    const supportedChains = [84532, 97, 1287]
     if (!supportedChains.includes(chainId.value)) {
-      throw new Error('Please switch to Base Sepolia or BSC Testnet')
+      throw new Error('Please switch to Base Sepolia or BSC Testnet or Moonbase Alpha')
     }
 
     const currentConfig = CONTRACT_CONFIGS[chainId.value]

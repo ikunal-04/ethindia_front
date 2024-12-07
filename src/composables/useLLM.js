@@ -5,7 +5,7 @@ export function useLLM() {
   const isLoading = ref(false)
   const error = ref(null)
 
-  const API_URL = 'https://codestral.us.gaianet.network/v1/chat/completions'
+  const API_URL = 'https://llama.us.gaianet.network/v1/chat/completions'
 
   const axiosInstance = axios.create({
     baseURL: API_URL,
