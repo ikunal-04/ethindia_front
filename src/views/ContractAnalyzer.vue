@@ -502,6 +502,7 @@ contract Example {
             :is-submitting="isSubmitting"
             :tx-hash="txHash"
             :tx-pending="txPending"
+            :blob-id="blobId1"
             @submit="handleSubmitReport"
           />
         </template>
@@ -562,6 +563,7 @@ const importError = ref("");
 const analysisError = ref("");
 const analysisResult = ref(null);
 const txHash = ref("");
+const blobId1 = ref("");
 const txPending = ref(false);
 const streamingResult = ref("");
 
@@ -1038,7 +1040,7 @@ async function handleSubmitReport() {
   txPending.value = true;
 
   try {
-    const { receipt, success } = await submitContractReport({
+    const { receipt, success, blobId } = await submitContractReport({
       contractAddress: contractAddress.value || ethers.ZeroAddress,
       riskScore: Math.floor(analysisResult.value.riskScore),
       issues: analysisResult.value.issues,
@@ -1048,6 +1050,7 @@ async function handleSubmitReport() {
     if (success && receipt?.hash) {
       txHash.value = receipt.hash;
       txPending.value = false;
+      blobId1.value = blobId;
     }
   } catch (error) {
     console.error("Error submitting report:", error);

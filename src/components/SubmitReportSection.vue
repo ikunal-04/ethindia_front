@@ -7,7 +7,7 @@
         <div class="space-y-2">
           <h3 class="text-2xl font-bold text-blue-300">Submit Report On-Chain</h3>
           <p class="text-gray-300 text-lg">
-            Permanently record this security analysis on AIA Chain
+            Permanently record this security analysis on MultiChain
           </p>
         </div>
         <button
@@ -49,19 +49,20 @@
               {{ txPending ? 'Pending' : 'Confirmed' }}
             </span>
           </div>
-          <a
-            :href="`https://testnet.aiascan.com/tx/${txHash}`"
+          <!-- <a
+            :href="`https://walruscan.com/testnet/blob/${blobId}`"
             target="_blank"
             rel="noopener noreferrer"
             class="text-blue-400 hover:text-blue-300 underline text-sm"
           >
             View on Explorer
-          </a>
+          </a> -->
+          <p>{{blobId}}</p>
         </div>
       </div>
       
       <div class="text-sm text-gray-400 mt-4">
-        <p>✨ Your submitted report will be verified by the AIA Chain community and becomes part of the platform's security knowledge base.</p>
+        <p>✨ Your submitted report will be Permanently stored on Walrus and becomes part of the platform's security knowledge base.</p>
       </div>
     </div>
   </div>
@@ -74,6 +75,10 @@ defineProps({
     default: false
   },
   txHash: {
+    type: String,
+    default: ''
+  },
+  blobId: {
     type: String,
     default: ''
   },

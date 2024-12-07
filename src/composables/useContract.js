@@ -1328,45 +1328,53 @@ export function useContract() {
 
   async function getContract() {
     if (!window.ethereum) {
-      throw new Error('No wallet detected')
+      throw new Error('No wallet detected');
     }
-
+  
     if (!isConnected.value) {
-      throw new Error('Wallet not connected')
+      throw new Error('Wallet not connected');
     }
-
-    const supportedChains = [84532, 97, 1287]
-    if (!supportedChains.includes(chainId.value)) {
-      throw new Error('Please switch to Base Sepolia or BSC Testnet or Moonbase Alpha')
+  
+    // Retrieve chainId from the wallet
+    const ethersProvider = new ethers.BrowserProvider(window.ethereum);
+    const network = await ethersProvider.getNetwork();
+    const chainId = Number(network.chainId);
+    console.log('chainId', chainId);
+  
+    const supportedChains = [84532, 97, 1287];
+    if (!supportedChains.includes(chainId)) {
+      throw new Error('Please switch to Base Sepolia, BSC Testnet, or Moonbase Alpha');
     }
-
-    const currentConfig = CONTRACT_CONFIGS[chainId.value]
+  
+    const currentConfig = CONTRACT_CONFIGS[chainId];
     if (!currentConfig) {
-      throw new Error('Unsupported network')
+      throw new Error('Unsupported network');
     }
-
+  
     try {
-      const ethersProvider = new ethers.BrowserProvider(window.ethereum)
-      const signer = await ethersProvider.getSigner()
+      const signer = await ethersProvider.getSigner();
       contract.value = new ethers.Contract(
-        currentConfig.address, 
-        currentConfig.abi,  
+        currentConfig.address,
+        currentConfig.abi,
         signer
-      )
-      return contract.value
+      );
+      return contract.value;
     } catch (err) {
-      console.error('Error initializing contract:', err)
-      throw new Error('Failed to initialize contract')
+      console.error('Error initializing contract:', err);
+      throw new Error('Failed to initialize contract');
     }
   }
+  
 
   async function submitReport({ contractAddress, riskScore, issues, suggestions }) {
-    isLoading.value = true
-    error.value = ''
-    txHash.value = ''
+    isLoading.value = true;
+    error.value = '';
+    txHash.value = '';
+
+    const PUBLISHER = "https://publisher.walrus-testnet.walrus.space"; // Replace with your desired Walrus publisher URL
 
     try {
-      const contract = await getContract()
+      const contract = await getContract();
 
       // Create report data
       const reportData = {
@@ -1375,98 +1383,138 @@ export function useContract() {
         riskScore,
         issues,
         suggestions,
-        auditor: address.value
+        auditor: address.value,
+      };
+
+      // Convert report data to JSON string
+      const reportDataString = JSON.stringify(reportData);
+
+      // Submit the report to Walrus Publisher
+      const walrusResponse = await fetch(`${PUBLISHER}/v1/store`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: reportDataString,
+      });
+
+      if (!walrusResponse.ok) {
+        throw new Error(`Failed to store report on Walrus: ${walrusResponse.statusText}`);
       }
 
-      // Generate IPFS-like hash (mock for now)
-      const ipfsHash = 'Qm' + Math.random().toString(36).substring(2, 15)
+      const walrusResult = await walrusResponse.json();
+      const blobId = walrusResult.newlyCreated?.blobObject?.blobId;
+
+      if (!blobId) {
+        throw new Error("Walrus did not return a valid blob ID.");
+      }
 
       try {
         // Estimate gas
-        const gasEstimate = await contract.submitReport.estimateGas(
-          contractAddress,
-          ipfsHash,
-          riskScore
-        )
+        const gasEstimate = await contract.submitReport.estimateGas(contractAddress, blobId, riskScore);
 
         // Add 20% buffer to gas estimate using BigInt math
-        const gasLimit = (gasEstimate * BigInt(120)) / BigInt(100)
+        const gasLimit = (gasEstimate * BigInt(120)) / BigInt(100);
 
         // Submit to blockchain
-        const tx = await contract.submitReport(
-          contractAddress,
-          ipfsHash,
-          riskScore,
-          { gasLimit }
-        )
+        const tx = await contract.submitReport(contractAddress, blobId, riskScore, { gasLimit });
 
-        txHash.value = tx.hash
+        txHash.value = tx.hash;
 
         // Wait for transaction confirmation
-        const receipt = await tx.wait()
-
+        const receipt = await tx.wait();
+        // txHash.value = blobId;
+        console.log(blobId);
         return {
           success: true,
           receipt,
-          reportData
-        }
+          reportData,
+          blobId,
+        };
       } catch (gasError) {
         // If gas estimation fails, try without gas limit
-        console.warn('Gas estimation failed, trying without gas limit:', gasError)
+        console.warn("Gas estimation failed, trying without gas limit:", gasError);
 
-        const tx = await contract.submitReport(
-          contractAddress,
-          ipfsHash,
-          riskScore
-        )
+        const tx = await contract.submitReport(contractAddress, blobId, riskScore);
 
-        txHash.value = tx.hash
+        txHash.value = tx.blobId;
 
-        const receipt = await tx.wait()
+        const receipt = await tx.wait();
+        // console.log(blobId);
 
         return {
           success: true,
           receipt,
-          reportData
-        }
+          reportData,
+          blobId,
+        };
       }
-
     } catch (err) {
-      console.error('Error submitting report:', err)
-      error.value = err.message || 'Failed to submit report'
+      console.error("Error submitting report:", err);
+      error.value = err.message || "Failed to submit report";
       return {
         success: false,
-        error: err.message
-      }
+        error: err.message,
+      };
     } finally {
-      isLoading.value = false
+      isLoading.value = false;
     }
   }
 
   // Rest of your existing functions remain the same...
   async function getReports(contractAddress) {
-    error.value = ''
+  error.value = '';
 
-    try {
-      const contract = await getContract()
-      const reports = await contract.getReports(contractAddress)
+  const PUBLISHER = "https://publisher.walrus-testnet.walrus.space"; 
 
-      // Format the reports data
-      return reports.map(report => ({
-        contractAddress: report.contractAddress,
-        ipfsHash: report.ipfsHash,
-        riskScore: Number(report.riskScore),
-        timestamp: Number(report.timestamp),
-        auditor: report.auditor,
-        isVerified: report.isVerified
-      }))
+  try {
+    const contract = await getContract();
+    const reports = await contract.getReports(contractAddress);
 
-    } catch (err) {
-      console.error('Error getting reports:', err)
-      error.value = err.message || 'Failed to fetch reports'
-      throw err
-    }
+    // Fetch the report data from Walrus for each blob ID
+    const formattedReports = await Promise.all(
+      reports.map(async (report) => {
+        const blobId = report.ipfsHash; // Use ipfsHash as blobId
+        let reportData;
+
+        try {
+          const walrusResponse = await fetch(`${PUBLISHER}/v1/fetch/${blobId}`, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          });
+
+          if (!walrusResponse.ok) {
+            throw new Error(`Failed to fetch report from Walrus: ${walrusResponse.statusText}`);
+          }
+
+          reportData = await walrusResponse.json();
+        } catch (fetchError) {
+          console.warn(`Failed to fetch Walrus report for blob ID ${blobId}:`, fetchError);
+          reportData = null; // If fetch fails, keep null as report data
+        }
+
+        return {
+          contractAddress: report.contractAddress,
+          blobId, // Formerly ipfsHash
+          riskScore: Number(report.riskScore),
+          timestamp: Number(report.timestamp),
+          auditor: report.auditor,
+          isVerified: report.isVerified,
+          reportData, // Include the fetched data if available
+        };
+      })
+    );
+
+    return formattedReports;
+  } catch (err) {
+    console.error('Error getting reports:', err);
+    error.value = err.message || 'Failed to fetch reports';
+    throw err;
   }
+}
+
 
   async function getAuditorDetails(auditorAddress) {
     error.value = ''
@@ -1574,6 +1622,6 @@ export function useContract() {
     updateAuditorReputation,
     isLoading,
     error,
-    txHash
+    txHash,
   }
 }
