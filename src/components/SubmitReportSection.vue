@@ -41,7 +41,7 @@
       <div v-if="txHash" class="mt-4 bg-blue-900/30 rounded-lg p-4 border border-blue-700/30">
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-2">
-            <span class="text-gray-400">Transaction Status:</span>
+            <span class="text-gray-400">Transaction Status on Walrus (Blob-Id):</span>
             <span :class="[
               'px-2 py-1 rounded-full text-sm',
               txPending ? 'bg-yellow-900/50 text-yellow-300' : 'bg-green-900/50 text-green-300'

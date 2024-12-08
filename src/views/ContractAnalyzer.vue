@@ -12,7 +12,7 @@
           Secure Your Smart Contracts with AI
         </h1>
         <p class="text-xl text-gray-300 mb-10 max-w-3xl mx-auto">
-          BugHuntr.ai uses advanced AI to analyze your smart contracts, identify
+          BugScout.ai uses advanced AI to analyze your smart contracts, identify
           vulnerabilities, and ensure your code is production-ready.
         </p>
         <div class="flex flex-col sm:flex-row justify-center gap-4">
@@ -51,7 +51,7 @@
     <!-- Features Grid -->
     <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <h2 class="text-3xl font-bold text-center mb-12">
-        Why Choose BugHuntr.ai?
+        Why Choose BugScout.ai?
       </h2>
       <div class="grid md:grid-cols-3 gap-8">
         <div
@@ -118,7 +118,7 @@
           Ready to Secure Your Smart Contracts?
         </h2>
         <p class="text-xl text-gray-200 mb-8 max-w-2xl mx-auto">
-          Join thousands of developers who trust BugHuntr.ai for their smart
+          Join thousands of developers who trust BugScout.ai for their smart
           contract security needs.
         </p>
         <button
@@ -181,7 +181,7 @@
                 </h4>
                 <p class="mt-1 text-sm">
                   Use the contract import feature below to analyze verified
-                  contracts on AIA Chain. Simply enter the contract address and
+                  contracts on MutliChain. Simply enter the contract address and
                   the tool will fetch the verified source code automatically.
                 </p>
               </div>
@@ -191,7 +191,7 @@
                   Option 2: Direct Code Analysis
                 </h4>
                 <p class="mt-1 text-sm">
-                  For contracts not verified on AIA Chain or contracts under
+                  For contracts not verified on MutliChain or contracts under
                   development, you can paste your smart contract code directly
                   into the text area below for analysis.
                 </p>
@@ -206,7 +206,7 @@
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-xl font-semibold">Import Verified Contracts</h2>
           <span class="text-xs text-gray-400 px-2 py-1 bg-gray-700 rounded"
-            >Supports AIA Chain Only</span
+            >Supports MutliChain Only</span
           >
         </div>
 
@@ -659,7 +659,7 @@ const riskScoreTextColor = computed(() => {
 
 const getSubmitButtonText = computed(() => {
   if (!isConnected.value) return "Connect Wallet to Submit";
-  if (!isCorrectChain.value) return "Switch to AIA Testnet";
+  if (!isCorrectChain.value) return "Switch to MutliTestnet";
   if (isSubmitting.value) return "Submitting...";
   return "Submit Report";
 });
@@ -772,7 +772,7 @@ async function handleImportContract() {
   try {
     let response;
     console.log("Current Chain ID:", chainId);
-    
+
     switch (chainId) {
       case 84532: // Base Sepolia
         response = await axios.get(
@@ -783,36 +783,46 @@ async function handleImportContract() {
         );
         processEVMContract(response.data);
         break;
-      
+
       case 97: // BNB Testnet
         response = await axios.get(
           `https://api-testnet.bscscan.com/api?module=contract&action=getsourcecode&address=${contractAddress.value}&apikey=8TMEYFU6KN1WWKV3DJNP5QYI2BD5127YZE`
         );
-        
+
         if (response.data.status === "1" && response.data.result.length > 0) {
           processEVMContract(response.data.result[0]);
         } else {
-          throw new Error('Contract not found or not verified');
+          throw new Error("Contract not found or not verified");
         }
         break;
-      
+
       case 1287: // Moonbase Alpha (Polkadot/Substrate)
-        response = await axios.get('https://api-moonbase.moonscan.io/api', {
+        response = await axios.get("https://api-moonbase.moonscan.io/api", {
           params: {
-            module: 'contract',
-            action: 'getsourcecode',
+            module: "contract",
+            action: "getsourcecode",
             address: contractAddress.value,
-            apikey: "Z7NAZ6VZDQRDN9PG9ZFT9SWRE2U65NFV11" // You'll need to add your Moonscan API key
-          }
+            apikey: "Z7NAZ6VZDQRDN9PG9ZFT9SWRE2U65NFV11", // You'll need to add your Moonscan API key
+          },
         });
-        
+
         if (response.data.status === "1" && response.data.result.length > 0) {
           processPolkadotContract(response.data.result[0]);
         } else {
-          throw new Error('Contract not found or not verified');
+          throw new Error("Contract not found or not verified");
         }
         break;
-      
+      case 5115:
+        response = await axios.get(
+          `https://explorer.testnet.citrea.xyz/api/v2/smart-contracts/${contractAddress.value}`,
+          {
+            headers: { accept: "application/json" },
+          }
+        );
+
+        processEVMContract(response.data);
+        break;
+
       default:
         throw new Error(`Unsupported network with chainId: ${chainId}`);
     }
@@ -832,26 +842,32 @@ function processEVMContract(contractData) {
   const sourceCode = contractData.SourceCode || contractData.source_code;
 
   if (!sourceCode) {
-    throw new Error('Contract source code not available. The contract may not be verified.');
+    throw new Error(
+      "Contract source code not available. The contract may not be verified."
+    );
   }
 
   let fullCode = sourceCode;
 
   try {
     // Check if the source code is a JSON string
-    if (sourceCode.trim().startsWith('{{')) {
+    if (sourceCode.trim().startsWith("{{")) {
       // Normalize braces and parse the JSON structure
-      const parsedSource = JSON.parse(sourceCode.replace(/{{/g, '{').replace(/}}/g, '}'));
+      const parsedSource = JSON.parse(
+        sourceCode.replace(/{{/g, "{").replace(/}}/g, "}")
+      );
 
       // Iterate through the sources to find the first Solidity file content
       const sources = parsedSource?.sources;
-      if (!sources || typeof sources !== 'object') {
-        throw new Error('Invalid source structure in the provided source code.');
+      if (!sources || typeof sources !== "object") {
+        throw new Error(
+          "Invalid source structure in the provided source code."
+        );
       }
 
       const fileNames = Object.keys(sources);
       if (fileNames.length === 0) {
-        throw new Error('No source files found in the provided source code.');
+        throw new Error("No source files found in the provided source code.");
       }
 
       // Extract the first file's content
@@ -859,7 +875,9 @@ function processEVMContract(contractData) {
       const content = sources[firstFileName]?.content;
 
       if (!content) {
-        throw new Error(`Solidity code content not found in the file: ${firstFileName}`);
+        throw new Error(
+          `Solidity code content not found in the file: ${firstFileName}`
+        );
       }
 
       fullCode = content;
@@ -870,43 +888,50 @@ function processEVMContract(contractData) {
 
   // Add compiler version if available
   if (contractData.CompilerVersion || contractData.compiler_version) {
-    fullCode = `// Compiler: ${contractData.CompilerVersion || contractData.compiler_version}\n${fullCode}`;
+    fullCode = `// Compiler: ${
+      contractData.CompilerVersion || contractData.compiler_version
+    }\n${fullCode}`;
   }
 
   // Assign processed code to the reactive state
   contractCode.value = fullCode;
   analysisResult.value = null;
-  analysisError.value = '';
+  analysisError.value = "";
 
   // Return the processed code for further use
   return fullCode;
 }
-
 
 function processPolkadotContract(contractData) {
   const sourceCode = contractData.SourceCode || contractData.source_code;
 
   if (!sourceCode) {
-    throw new Error('Contract source code not available. The contract may not be verified.');
+    throw new Error(
+      "Contract source code not available. The contract may not be verified."
+    );
   }
 
   let fullCode = sourceCode;
 
   try {
     // Check if the source code is a JSON string
-    if (sourceCode.trim().startsWith('{{')) {
+    if (sourceCode.trim().startsWith("{{")) {
       // Normalize braces and parse the JSON structure
-      const parsedSource = JSON.parse(sourceCode.replace(/{{/g, '{').replace(/}}/g, '}'));
+      const parsedSource = JSON.parse(
+        sourceCode.replace(/{{/g, "{").replace(/}}/g, "}")
+      );
 
       // Iterate through the sources to find the first Solidity file content
       const sources = parsedSource?.sources;
-      if (!sources || typeof sources !== 'object') {
-        throw new Error('Invalid source structure in the provided source code.');
+      if (!sources || typeof sources !== "object") {
+        throw new Error(
+          "Invalid source structure in the provided source code."
+        );
       }
 
       const fileNames = Object.keys(sources);
       if (fileNames.length === 0) {
-        throw new Error('No source files found in the provided source code.');
+        throw new Error("No source files found in the provided source code.");
       }
 
       // Extract the first file's content
@@ -914,7 +939,9 @@ function processPolkadotContract(contractData) {
       const content = sources[firstFileName]?.content;
 
       if (!content) {
-        throw new Error(`Solidity code content not found in the file: ${firstFileName}`);
+        throw new Error(
+          `Solidity code content not found in the file: ${firstFileName}`
+        );
       }
 
       fullCode = content;
@@ -925,19 +952,19 @@ function processPolkadotContract(contractData) {
 
   // Add compiler version if available
   if (contractData.CompilerVersion || contractData.compiler_version) {
-    fullCode = `// Compiler: ${contractData.CompilerVersion || contractData.compiler_version}\n${fullCode}`;
+    fullCode = `// Compiler: ${
+      contractData.CompilerVersion || contractData.compiler_version
+    }\n${fullCode}`;
   }
 
   // Assign processed code to the reactive state
   contractCode.value = fullCode;
   analysisResult.value = null;
-  analysisError.value = '';
+  analysisError.value = "";
 
   // Return the processed code for further use
   return fullCode;
 }
-
-
 
 async function handleAnalyzeContract() {
   if (!contractCode.value.trim()) {
@@ -991,45 +1018,6 @@ async function handleAnalyzeContract() {
   } finally {
     isAnalyzing.value = false;
   }
-}
-
-async function performBasicAnalysis() {
-  // const code = contractCode.value.toLowerCase()
-  // const issues = []
-  // let riskScore = 0
-
-  // // Basic security checks
-  // if (code.includes('call') && !code.includes('reentrancyguard')) {
-  //   issues.push({
-  //     severity: 'critical',
-  //     title: 'Potential Reentrancy Vulnerability',
-  //     description: 'The contract uses low-level call without ReentrancyGuard protection',
-  //     suggestion: 'Use OpenZeppelin\'s ReentrancyGuard or implement checks-effects-interactions pattern'
-  //   })
-  //   riskScore += 30
-  // }
-
-  // if ((code.includes('.transfer(') || code.includes('.send(')) && !code.includes('require')) {
-  //   issues.push({
-  //     severity: 'high',
-  //     title: 'Unchecked Return Values',
-  //     description: 'Transfer/send return values are not checked',
-  //     suggestion: 'Use SafeERC20 or check return values with require statements'
-  //   })
-  //   riskScore += 20
-  // }
-
-  // analysisResult.value = {
-  //   riskScore: Math.min(riskScore, 100),
-  //   issues,
-  //   suggestions: [
-  //     {
-  //       title: 'Fallback Analysis',
-  //       description: 'This is a basic analysis due to AI service unavailability. Consider retrying later for detailed analysis.'
-  //     }
-  //   ]
-  // }
-  return null;
 }
 
 async function handleSubmitReport() {

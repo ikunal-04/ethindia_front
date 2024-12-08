@@ -9,7 +9,7 @@
             <!-- Logo and Navigation -->
             <div class="flex items-center space-x-8">
               <router-link to="/" class="text-2xl font-bold flex items-center">
-                🔍 BugHuntr.ai
+                🔍 BugScout.ai
               </router-link>
               
               <div class="hidden md:flex space-x-6">
@@ -132,7 +132,7 @@
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div class="flex justify-between items-center">
           <div class="text-gray-400 text-sm">
-            &copy; 2024 BugHuntr.ai. 
+            &copy; 2024 BugScout.ai. 
           </div>
           <div class="flex space-x-6">
             <p class="text-gray-400 hover:text-white">Discord and other channels, coming soon. Our product is great but our footer is a joke :)</p>

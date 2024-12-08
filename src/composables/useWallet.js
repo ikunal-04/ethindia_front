@@ -37,6 +37,18 @@ const MOONBASE_CONFIG = {
   blockExplorerUrls: ['https://moonbase.moonscan.io'],
 };
 
+const CITREA_CONFIG = {
+  chainId: '0x13fb', // 5115 in decimal
+  chainName: 'Citrea Testnet',
+  nativeCurrency: {
+    name: 'CTR',
+    symbol: 'CTR',
+    decimals: 18,
+  },
+  rpcUrls: ['https://rpc.testnet.citrea.xyz'],
+  blockExplorerUrls: ['https://explorer.testnet.citrea.xyz'],
+};
+
 export function useWallet() {
   const address = ref('');
   const balance = ref('0');
@@ -44,7 +56,7 @@ export function useWallet() {
   const isCorrectChain = ref(false);
   const error = ref('');
   const isLoading = ref(false);
-  const currentNetwork = ref('base'); 
+  const currentNetwork = ref('base');
 
   // Enum-like object for networks
   const NETWORKS = {
@@ -55,17 +67,30 @@ export function useWallet() {
     BSC_TESTNET: {
       config: BSC_TESTNET_CONFIG,
       name: 'bsc'
-    }, 
+    },
     MOONBASE: {
       config: MOONBASE_CONFIG,
       name: 'moonbase'
+    }, 
+    CITREA: {
+      config: CITREA_CONFIG,
+      name: 'citrea'
     }
   };
 
-  // Check if the current chain is the specified network
+  function resolveNetwork(preferredNetwork) {
+    switch (preferredNetwork) {
+      case 'bsc': return NETWORKS.BSC_TESTNET;
+      case 'moonbase': return NETWORKS.MOONBASE;
+      case 'citrea': return NETWORKS.CITREA;
+      default: return NETWORKS.BASE_SEPOLIA;
+    }
+  }
+
   async function checkChainId(network = NETWORKS.BASE_SEPOLIA) {
     try {
       const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+      console.log(`Current Chain ID: ${chainId}, Expected: ${network.config.chainId}`);
       const isCorrect = chainId === network.config.chainId;
       isCorrectChain.value = isCorrect;
       if (isCorrect) currentNetwork.value = network.name;
@@ -74,24 +99,27 @@ export function useWallet() {
       console.error('Error checking chain ID:', err);
       return false;
     }
-  }
+  }  
 
-  // Switch to specified Chain or add it if not present
   async function switchToChain(network = NETWORKS.BASE_SEPOLIA) {
     try {
+      console.log(`Attempting to switch to ${network.name} with Chain ID: ${network.config.chainId}`);
       await window.ethereum.request({
         method: 'wallet_switchEthereumChain',
         params: [{ chainId: network.config.chainId }],
       });
+      console.log(`Successfully switched to ${network.name}`);
       return true;
     } catch (switchError) {
-      // This error code indicates that the chain has not been added to MetaMask
+      console.error(`Error switching to ${network.name} Chain:`, switchError);
       if (switchError.code === 4902) {
         try {
+          console.log(`Attempting to add ${network.name} Chain`);
           await window.ethereum.request({
             method: 'wallet_addEthereumChain',
             params: [network.config],
           });
+          console.log(`${network.name} Chain added successfully`);
           return true;
         } catch (addError) {
           console.error(`Error adding ${network.name} Chain:`, addError);
@@ -99,11 +127,11 @@ export function useWallet() {
           return false;
         }
       }
-      console.error(`Error switching to ${network.name} Chain:`, switchError);
       error.value = `Failed to switch to ${network.name} Chain`;
       return false;
     }
   }
+  
 
   async function updateBalance(addr) {
     if (typeof window.ethereum !== 'undefined' && addr) {
@@ -130,7 +158,7 @@ export function useWallet() {
           if (wasConnected) {
             // Try Base Sepolia first
             let isCorrectNetwork = await checkChainId(NETWORKS.BASE_SEPOLIA);
-            
+
             // If not Base Sepolia, try BSC Testnet
             if (!isCorrectNetwork) {
               isCorrectNetwork = await checkChainId(NETWORKS.BSC_TESTNET);
@@ -139,6 +167,11 @@ export function useWallet() {
             // If not BSC Testnet, try Moonbase
             if (!isCorrectNetwork) {
               isCorrectNetwork = await checkChainId(NETWORKS.MOONBASE);
+            }
+
+            if (!isCorrectNetwork) {
+              // If not Moonbase, try Citrea Testnet
+              isCorrectNetwork = await checkChainId(NETWORKS.CITREA);
             }
 
             if (isCorrectNetwork) {
@@ -159,6 +192,7 @@ export function useWallet() {
   }
 
   async function handleAccountsChanged(accounts) {
+    console.log('Accounts changed:', accounts);
     if (accounts.length === 0) {
       // User disconnected their wallet
       disconnectWallet();
@@ -171,9 +205,10 @@ export function useWallet() {
   }
 
   async function handleChainChanged(chainId) {
+    console.log(`Chain changed to: ${chainId}`);
     // Check if the chainId matches Base Sepolia, BSC Testnet, or Moonbase
     let isCorrectNetwork = false;
-    
+
     if (chainId === NETWORKS.BASE_SEPOLIA.config.chainId) {
       isCorrectNetwork = true;
       currentNetwork.value = NETWORKS.BASE_SEPOLIA.name;
@@ -183,64 +218,63 @@ export function useWallet() {
     } else if (chainId === NETWORKS.MOONBASE.config.chainId) {
       isCorrectNetwork = true;
       currentNetwork.value = NETWORKS.MOONBASE.name;
+    } else if (chainId === NETWORKS.CITREA.config.chainId) {
+      isCorrectNetwork = true;
+      currentNetwork.value = NETWORKS.CITREA.name;
     }
 
     isCorrectChain.value = isCorrectNetwork;
-    
+
     if (!isCorrectNetwork && isConnected.value) {
-      error.value = 'Please switch to Base Sepolia, BSC Testnet, or Moonbase Testnet';
+      error.value = 'Please switch to Base Sepolia, BSC Testnet, or Moonbase Testnet or Citrea Testnet';
     } else {
       error.value = '';
     }
-    
+
     // Reload the page to avoid any state inconsistencies
     window.location.reload();
   }
 
   async function connect(preferredNetwork = 'base') {
     if (typeof window.ethereum === 'undefined') {
+      console.error('MetaMask is not installed.');
       error.value = 'Please install MetaMask!';
       return;
     }
-
+  
+    console.log('Connecting wallet...');
     isLoading.value = true;
     error.value = '';
-
+  
     try {
-      // Request account access
-      const accounts = await window.ethereum.request({
-        method: 'eth_requestAccounts',
-      });
-
-      // Choose network configuration based on preferred network
-      const network = 
-        preferredNetwork === 'bsc' ? NETWORKS.BSC_TESTNET :
-        preferredNetwork === 'moonbase' ? NETWORKS.MOONBASE :
-        NETWORKS.BASE_SEPOLIA;
-
-      // Ensure we're on the correct network
+      await window.ethereum.request({ method: 'eth_requestAccounts' });
+      console.log('Accounts requested successfully.');
+  
+      const network = resolveNetwork(preferredNetwork);
+      console.log(`Resolved network: ${network.name} (${network.config.chainId})`);
+  
       let isCorrectNetwork = await checkChainId(network);
       if (!isCorrectNetwork) {
+        console.log(`Switching to the ${network.name} network.`);
         const switched = await switchToChain(network);
         if (!switched) {
           throw new Error(`Failed to switch to ${network.name} Chain`);
         }
       }
-
-      // Get provider and address
+  
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
       const addr = await signer.getAddress();
-
-      // Update state
+      console.log(`Connected wallet address: ${addr}`);
+  
       address.value = addr;
       await updateBalance(addr);
       isConnected.value = true;
       isCorrectChain.value = true;
       currentNetwork.value = network.name;
-
-      // Save connection state to session storage
+  
       sessionStorage.setItem('walletConnected', 'true');
+      console.log('Wallet connection state saved.');
     } catch (err) {
       console.error('Failed to connect wallet:', err);
       error.value = err.message || 'Failed to connect wallet';
@@ -249,6 +283,7 @@ export function useWallet() {
       isLoading.value = false;
     }
   }
+  
 
   function disconnectWallet() {
     isConnected.value = false;
@@ -288,6 +323,6 @@ export function useWallet() {
     error,
     isLoading,
     currentNetwork,
-    NETWORKS, // Expose networks for easier reference
+    NETWORKS,
   };
 }

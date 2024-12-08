@@ -55,7 +55,7 @@
           </svg>
         </a>
         <a 
-          href="mailto:support@bughuntr.ai"
+          href="mailto:support@BugScout.ai"
           class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg flex items-center"
         >
           <span class="mr-2">Email Support</span>
@@ -77,8 +77,8 @@ const faqCategories = reactive([
     title: 'General Questions',
     items: [
       {
-        question: 'What is BugHuntr.ai?',
-        answer: 'BugHuntr.ai is an AI-powered smart contract analysis platform that helps developers and auditors identify potential vulnerabilities and security risks in their smart contracts.',
+        question: 'What is BugScout.ai?',
+        answer: 'BugScout.ai is an AI-powered smart contract analysis platform that helps developers and auditors identify potential vulnerabilities and security risks in their smart contracts.',
         isOpen: false
       },
       {
@@ -87,8 +87,8 @@ const faqCategories = reactive([
         isOpen: false
       },
       {
-        question: 'Is BugHuntr.ai free to use?',
-        answer: 'Basic analysis features are free to use. Premium features and detailed reports may require payment in AIA tokens.',
+        question: 'Is BugScout.ai free to use?',
+        answer: 'Basic analysis features are free to use. Premium features and detailed reports may require payment in Mutlitokens.',
         isOpen: false
       }
     ]
@@ -120,7 +120,7 @@ const faqCategories = reactive([
     items: [
       {
         question: 'Which networks are supported?',
-        answer: 'BugHuntr.ai currently operates on the AIA Chain Testnet. Support for additional networks is planned for future releases.',
+        answer: 'BugScout.ai currently operates on the MutliChain Testnet. Support for additional networks is planned for future releases.',
         isOpen: false
       },
       {

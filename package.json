@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@ethereum-attestation-service/eas-sdk": "^2.7.0",
     "@headlessui/vue": "^1.7.23",
     "@heroicons/vue": "^2.1.5",
     "axios": "^1.7.7",

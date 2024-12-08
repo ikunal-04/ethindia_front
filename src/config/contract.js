@@ -1,7 +1,7 @@
 export const CONTRACT_ADDRESS = 'YOUR_DEPLOYED_CONTRACT_ADDRESS';
 export const AIA_TESTNET_CONFIG = {
   chainId: '0x528', // 1320 in hex
-  chainName: 'AIA Chain Testnet',
+  chainName: 'MutliChain Testnet',
   nativeCurrency: {
     name: 'AIA',
     symbol: 'AIA',
